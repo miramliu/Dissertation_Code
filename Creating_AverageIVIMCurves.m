@@ -6,7 +6,8 @@
 % DON'T ACTUALLY RUN THIS CODE PLEASE. 
 
 
-% Done initially on Case 17, Day 2 (Experimental group) 
+% Done initially on Case 17, Day 2, SLICE 25  (Experimental group) 
+% Slice 23 for ventricle-only
 function Creating_AverageIVIMCurves ()
 
 %{
@@ -56,7 +57,7 @@ save('ROIs_For_Average_IVIM_Curves.mat','Dcsfmask','Infarctmask','WM','GM')
 
 %% Now applying those masks 
 %}
-load('/Users/neuroimaging/Desktop/ROIs_For_Average_IVIM_Curves.mat');
+load('/Users/neuroimaging/Desktop/MR-Code/Dissertation_Code/ROIs_For_Average_IVIM_Curves.mat','Dcsfmask','GM','Infarctmask','WM','ventricle','brainMask');
 Image_Directory = '/Users/neuroimaging/Desktop/DATA/IVIM_PD/IVIM_17/Day2/Scan 68 IVIM_sorted';
 dat_list = dir(fullfile(Image_Directory,'IM*'));
 datnames = {dat_list.name}; %read them in the correct order
@@ -73,16 +74,19 @@ Bvalues = [0, 111, 222, 333, 444, 556, 667, 778, 889, 1000];
 slice = 25;
 %then get masks (where the masks are both the masks minus the Dcsfmask.
 % so for example GM mask is the GM mask minus the DSC mask that's > 0 . 
-Dcsf_mask = Dcsfmask;
+Dcsf_mask = Dcsfmask.*brainMask; %need to make sure it's only in the brain!
 Infarct_mask = (Infarctmask-Dcsfmask)>0;
 GM_mask = (GM - Dcsfmask) > 0;
 WM_mask = (WM - Dcsfmask) > 0;
+ventricle_mask = ventricle;
 
 
 CSF_sig = getAvergeROI(Image_Directory,Images_Per_Slice,Start_Index,nx,ny,Num_Bvalues,datnames,slice,Dcsf_mask);
 Infarct_sig = getAvergeROI(Image_Directory,Images_Per_Slice,Start_Index,nx,ny,Num_Bvalues,datnames,slice,Infarct_mask);
 GM_sig = getAvergeROI(Image_Directory,Images_Per_Slice,Start_Index,nx,ny,Num_Bvalues,datnames,slice,GM_mask);
 WM_sig = getAvergeROI(Image_Directory,Images_Per_Slice,Start_Index,nx,ny,Num_Bvalues,datnames,slice,WM_mask);
+% note ventricle was on slice 23, not 25
+Ventricle_sig = getAvergeROI(Image_Directory,Images_Per_Slice,Start_Index,nx,ny,Num_Bvalues,datnames,23,ventricle_mask);
 
 
 % no norm
@@ -126,15 +130,19 @@ hold on
 plot(Bvalues,Infarct_sig/Infarct_sig(norm_to),LineWidth=3.0,Color=[0.6350 0.0780 0.1840]) %Infarct is red
 hold on
 scatter(Bvalues,Infarct_sig/Infarct_sig(norm_to),70,markerfacecolor = "black")
+hold on
+plot(Bvalues,Ventricle_sig/Ventricle_sig(norm_to),LineWidth=3.0,Color=[0.3010 0.7450 0.9330]) %ventricle is cyan
+hold on
+scatter(Bvalues,Ventricle_sig/Ventricle_sig(norm_to),70,markerfacecolor = "black")
 hold off
-legend('CSF','','Infarct','','GM','','WM',''),set(legend,'fontsize',15)
+legend('CSF','','GM','','WM','','Infarct','','Ventricle',''),set(legend,'fontsize',15)
 xlabel('b-value (s/mm^2)',FontSize=25)
 
 
 %% Now save all the values in an excel sheet
 
 
-listed = [CSF_sig,Infarct_sig,GM_sig,WM_sig];
+listed = [CSF_sig,Infarct_sig,GM_sig,WM_sig,Ventricle_sig];
 
 savefilename = '/Users/neuroimaging/Desktop/MR-Code/Dissertation_Code/AverageIVIMCUrves.xlsx';
 writematrix(listed,savefilename,'Sheet',1)
